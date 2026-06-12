@@ -21,7 +21,7 @@ const NEARBY_DAYS_AFTER = 1;
 
 export const FAMILY_HOLIDAYS: FamilyHolidayDefinition[] = [
   // Add recurring family dates here for now, for example:
-  // { label: "Grace Birthday", month: 7, day: 12 }
+  { label: "Grace Birthday", month: 6, day: 24 }
 ];
 
 const FAMILY_HOLIDAY_SCOPE: HolidayCallout["scope"] = "Family";
