@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AvailabilityStatus {
+  UNKNOWN
+  FREE
+  BUSY
+  MAYBE
+}
+
+model FamilyMember {
+  id            String         @id @default(cuid())
+  firstName     String         @unique
+  displayName   String
+  color         String?
+  isActive      Boolean        @default(true)
+  isOrganizer   Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  availability  Availability[]
+  sessions      Session[]
+}
+
+model Season {
+  id                String         @id @default(cuid())
+  name              String         @unique
+  year              Int
+  startDate         DateTime       @db.Date
+  endDate           DateTime       @db.Date
+  mostFreeThreshold Int
+  isActive          Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  weekends          Weekend[]
+  availability      Availability[]
+
+  @@index([isActive])
+}
+
+model Weekend {
+  id           String         @id @default(cuid())
+  seasonId     String
+  startDate    DateTime       @db.Date
+  endDate      DateTime       @db.Date
+  label        String
+  sortOrder    Int
+  season       Season         @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  availability Availability[]
+
+  @@unique([seasonId, startDate])
+  @@index([seasonId, sortOrder])
+}
+
+model Availability {
+  id             String             @id @default(cuid())
+  seasonId       String
+  weekendId      String
+  familyMemberId String
+  status         AvailabilityStatus @default(UNKNOWN)
+  note           String?
+  updatedAt      DateTime           @updatedAt
+  season         Season             @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  weekend        Weekend            @relation(fields: [weekendId], references: [id], onDelete: Cascade)
+  familyMember   FamilyMember       @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([weekendId, familyMemberId])
+  @@index([seasonId])
+  @@index([familyMemberId])
+}
+
+model Session {
+  id             String       @id @default(cuid())
+  familyMemberId String
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+  familyMember   FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([familyMemberId])
+  @@index([expiresAt])
+}
