@@ -77,4 +77,4 @@ Set these environment variables in the host:
 - `SESSION_SECRET`
 - `APP_BASE_URL`
 
-Run migrations during deployment with `npm run db:deploy`, then run the seed script once for the initial season and roster. The app build runs `prisma generate` before `next build`.
+Run migrations during deployment with `npm run db:deploy`, then run the seed script once for the initial season and roster. Vercel uses `vercel.json` to run migrations before the app build. The app build runs `prisma generate` before `next build`.
