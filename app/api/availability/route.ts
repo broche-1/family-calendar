@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { firstNamesShareFamilyRow } from "@/lib/family-groups";
+import { canSetJaneForecast, isJaneForecast } from "@/lib/jane-factor";
+import { toPrismaJaneForecast } from "@/lib/jane-factor-prisma";
 import { prisma } from "@/lib/prisma";
 import { getActiveSeasonPayload } from "@/lib/season";
 import { getCurrentMember } from "@/lib/session";
@@ -27,10 +29,17 @@ export async function PUT(request: Request) {
   const targetMemberId = typeof payload.familyMemberId === "string" ? payload.familyMemberId : currentMember.id;
   const status = payload.status;
   const note = typeof payload.note === "string" ? payload.note.trim().slice(0, 240) : null;
+  const janeForecast = payload.janeForecast;
 
   if (!weekendId || !isAvailabilityStatus(status)) {
     return NextResponse.json({ error: "Weekend and status are required." }, { status: 400 });
   }
+
+  if (janeForecast !== null && janeForecast !== undefined && !isJaneForecast(janeForecast)) {
+    return NextResponse.json({ error: "Jane Forecast is not valid." }, { status: 400 });
+  }
+
+  const parsedJaneForecast = isJaneForecast(janeForecast) ? janeForecast : null;
 
   const weekend = await prisma.weekend.findUnique({
     where: { id: weekendId },
@@ -58,6 +67,11 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "You can only edit your own family row." }, { status: 403 });
   }
 
+  const storedJaneForecast =
+    status === "free" && canSetJaneForecast(targetMember.firstName) && parsedJaneForecast
+      ? toPrismaJaneForecast(parsedJaneForecast)
+      : null;
+
   await prisma.availability.upsert({
     where: {
       weekendId_familyMemberId: {
@@ -67,14 +81,16 @@ export async function PUT(request: Request) {
     },
     update: {
       status: toPrismaStatus(status),
-      note: note || null
+      note: note || null,
+      janeForecast: storedJaneForecast
     },
     create: {
       seasonId: weekend.seasonId,
       weekendId,
       familyMemberId: targetMemberId,
       status: toPrismaStatus(status),
-      note: note || null
+      note: note || null,
+      janeForecast: storedJaneForecast
     }
   });
 

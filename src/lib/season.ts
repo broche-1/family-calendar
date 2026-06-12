@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import { canSetJaneForecast, strongestJaneForecast } from "@/lib/jane-factor";
+import { fromPrismaJaneForecast } from "@/lib/jane-factor-prisma";
 import { fromPrismaStatus } from "@/lib/status";
-import { AvailabilityCellPayload, AvailabilityStatus, SeasonPayload } from "@/types/planner";
+import { AvailabilityCellPayload, AvailabilityStatus, JaneForecast, SeasonPayload } from "@/types/planner";
 
 function dateOnly(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -11,6 +13,7 @@ function emptyCell(): AvailabilityCellPayload {
     id: null,
     status: "unknown",
     note: null,
+    janeForecast: null,
     updatedAt: null
   };
 }
@@ -56,6 +59,7 @@ export async function getActiveSeasonPayload(): Promise<SeasonPayload> {
       id: entry.id,
       status: fromPrismaStatus(entry.status),
       note: entry.note,
+      janeForecast: fromPrismaJaneForecast(entry.janeForecast),
       updatedAt: entry.updatedAt.toISOString()
     };
   }
@@ -73,6 +77,20 @@ export async function getActiveSeasonPayload(): Promise<SeasonPayload> {
       summary[status] += 1;
     }
 
+    const janeFactorSignals = members
+      .filter((member) => canSetJaneForecast(member.firstName))
+      .map((member) => ({
+        member,
+        forecast:
+          availability[member.id][weekend.id]?.status === "free"
+            ? availability[member.id][weekend.id]?.janeForecast
+            : null
+      }))
+      .filter((signal): signal is { member: (typeof members)[number]; forecast: JaneForecast } =>
+        Boolean(signal.forecast)
+      );
+    const strongestForecast = strongestJaneForecast(janeFactorSignals.map((signal) => signal.forecast));
+
     return {
       id: weekend.id,
       startDate: dateOnly(weekend.startDate),
@@ -80,6 +98,14 @@ export async function getActiveSeasonPayload(): Promise<SeasonPayload> {
       label: weekend.label,
       sortOrder: weekend.sortOrder,
       summary,
+      janeFactor: strongestForecast
+        ? {
+            forecast: strongestForecast,
+            sourceNames: janeFactorSignals
+              .filter((signal) => signal.forecast === strongestForecast)
+              .map((signal) => signal.member.firstName)
+          }
+        : null,
       flags: {
         everyoneFree: members.length > 0 && summary.free === members.length,
         mostFree: summary.free >= season.mostFreeThreshold,

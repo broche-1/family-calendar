@@ -83,6 +83,8 @@ Security note: first-name login is intentionally low-friction, not high-security
 - A user can optionally add a short note to one of their own cells.
 - Notes are visible to all logged-in family members.
 - A cell should show whether a note exists even in compact table mode.
+- Katie and Elizabeth can optionally add a Jane Forecast when they mark themselves Free.
+- Jane Forecast is a guest signal only; it does not add Jane to the roster or affect free/busy summary counts.
 - Changes should be saved immediately or with a clear save state.
 - The app should show a clear error if saving fails.
 - No family member can edit another family member's availability in the MVP.
@@ -244,6 +246,7 @@ Availability
 - familyMemberId
 - status
 - note
+- janeForecast
 - updatedAt
 
 Session
@@ -260,6 +263,7 @@ Constraints:
 - Duplicate first names are not handled in the MVP.
 - `Availability` should be unique by `weekendId` and `familyMemberId`.
 - `status` should be constrained to `unknown`, `free`, `busy`, or `maybe`.
+- `janeForecast` should be nullable and only set for Katie or Elizabeth when their status is `free`.
 
 ### 9.4 API Surface
 
@@ -367,6 +371,7 @@ Deployment requirements:
 - Historical inactive-member visibility is out of scope for now.
 - Optional free-text notes are enough; structured busy reasons are not part of the MVP.
 - The app will not send reminders for missing availability.
+- Jane Forecast is tracked only as a playful guest signal from Katie or Elizabeth free weekends and does not affect roster counts.
 
 ## 11. Recommended First Implementation Milestone
 
@@ -392,3 +397,4 @@ This milestone proves the central workflow before investing in admin screens, ri
 - Set the default season to Memorial Day weekend through Labor Day weekend with manual date picker overrides.
 - Confirmed duplicate first names, historical inactive-member visibility, structured busy reasons, and reminders are out of scope for the MVP.
 - Confirmed every family member counts equally in availability summaries.
+- Added Jane Forecast as a Katie/Elizabeth-only guest signal for free weekends.

@@ -1,24 +1,39 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 
 export function LoginForm() {
   const router = useRouter();
-  const [firstName, setFirstName] = useState("");
+  const firstNameRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const queryFirstName = new URLSearchParams(window.location.search).get("firstName")?.trim();
+
+    if (queryFirstName && firstNameRef.current && !firstNameRef.current.value) {
+      firstNameRef.current.value = queryFirstName;
+    }
+  }, []);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
+    const submittedFirstName = new FormData(form).get("firstName")?.toString().trim() ?? "";
+
+    if (!submittedFirstName) {
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     const response = await fetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ firstName })
+      body: JSON.stringify({ firstName: submittedFirstName })
     });
 
     if (!response.ok) {
@@ -39,15 +54,16 @@ export function LoginForm() {
       <form className="login-form" onSubmit={handleSubmit}>
         <label htmlFor="firstName">First name</label>
         <input
+          ref={firstNameRef}
           id="firstName"
+          name="firstName"
           autoComplete="given-name"
           autoFocus
-          value={firstName}
-          onChange={(event) => setFirstName(event.target.value)}
+          required
           placeholder="Brendan"
         />
         {error ? <p className="form-error">{error}</p> : null}
-        <button className="primary-button" type="submit" disabled={isSubmitting || !firstName.trim()}>
+        <button className="primary-button" type="submit" disabled={isSubmitting}>
           <LogIn aria-hidden="true" size={18} />
           {isSubmitting ? "Signing in" : "Continue"}
         </button>

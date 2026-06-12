@@ -14,6 +14,13 @@ enum AvailabilityStatus {
   MAYBE
 }
 
+enum JaneForecast {
+  SUNNY_WITH_JANE
+  PARTLY_JANEY
+  JANE_UNCLEAR
+  NO_JANE_EXPECTED
+}
+
 model FamilyMember {
   id            String         @id @default(cuid())
   firstName     String         @unique
@@ -64,6 +71,7 @@ model Availability {
   familyMemberId String
   status         AvailabilityStatus @default(UNKNOWN)
   note           String?
+  janeForecast   JaneForecast?
   updatedAt      DateTime           @updatedAt
   season         Season             @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   weekend        Weekend            @relation(fields: [weekendId], references: [id], onDelete: Cascade)

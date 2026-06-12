@@ -1,0 +1,3 @@
+CREATE TYPE "JaneForecast" AS ENUM ('SUNNY_WITH_JANE', 'PARTLY_JANEY', 'JANE_UNCLEAR', 'NO_JANE_EXPECTED');
+
+ALTER TABLE "Availability" ADD COLUMN "janeForecast" "JaneForecast";

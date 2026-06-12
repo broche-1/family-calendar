@@ -1,6 +1,8 @@
 export const STATUS_VALUES = ["unknown", "free", "busy", "maybe"] as const;
+export const JANE_FORECAST_VALUES = ["sunny_with_jane", "partly_janey", "jane_unclear", "no_jane_expected"] as const;
 
 export type AvailabilityStatus = (typeof STATUS_VALUES)[number];
+export type JaneForecast = (typeof JANE_FORECAST_VALUES)[number];
 
 export type MemberPayload = {
   id: string;
@@ -15,6 +17,7 @@ export type AvailabilityCellPayload = {
   id: string | null;
   status: AvailabilityStatus;
   note: string | null;
+  janeForecast: JaneForecast | null;
   updatedAt: string | null;
 };
 
@@ -32,6 +35,10 @@ export type WeekendPayload = {
   label: string;
   sortOrder: number;
   summary: WeekendSummaryPayload;
+  janeFactor: {
+    forecast: JaneForecast;
+    sourceNames: string[];
+  } | null;
   flags: {
     everyoneFree: boolean;
     mostFree: boolean;

@@ -3,21 +3,41 @@
 import { useMemo, useState } from "react";
 import {
   CheckCircle2,
+  Cloud,
+  CloudOff,
+  CloudSun,
   CircleHelp,
   Filter,
   Clock3,
   Save,
   StickyNote,
+  Sun,
   UsersRound,
   X
 } from "lucide-react";
 
 import { FAMILY_ROW_DEFINITIONS } from "@/lib/family-groups";
 import { getHolidayCalloutsForWeekend } from "@/lib/holidays";
+import { canSetJaneForecast, DEFAULT_JANE_FORECAST, JANE_FORECAST_META } from "@/lib/jane-factor";
 import { STATUS_META } from "@/lib/status-display";
-import { AvailabilityStatus, MemberPayload, SeasonPayload, STATUS_VALUES } from "@/types/planner";
+import {
+  AvailabilityStatus,
+  JaneForecast,
+  JANE_FORECAST_VALUES,
+  MemberPayload,
+  SeasonPayload,
+  STATUS_VALUES
+} from "@/types/planner";
 
 type HighlightKey = "everyoneFree" | "mostFree" | "needsResponses" | "myFree" | "myBusy";
+
+type AvailabilityUpdate = {
+  memberId: string;
+  weekendId: string;
+  status: AvailabilityStatus;
+  note: string;
+  janeForecast: JaneForecast | null;
+};
 
 type EditorTarget = {
   rowId: string;
@@ -46,6 +66,13 @@ const HIGHLIGHTS: Array<{
   { key: "myFree", label: "My free", icon: CheckCircle2 },
   { key: "myBusy", label: "My busy", icon: Clock3 }
 ];
+
+const JANE_FORECAST_ICONS: Record<JaneForecast, typeof CloudSun> = {
+  sunny_with_jane: Sun,
+  partly_janey: CloudSun,
+  jane_unclear: CircleHelp,
+  no_jane_expected: CloudOff
+};
 
 export function PlannerApp({ currentMember, initialPayload }: PlannerAppProps) {
   const [payload, setPayload] = useState(initialPayload);
@@ -128,9 +155,7 @@ export function PlannerApp({ currentMember, initialPayload }: PlannerAppProps) {
     return currentMember.isOrganizer || row.members.some((member) => member.id === currentMember.id);
   }
 
-  async function saveAvailability(
-    updates: Array<{ memberId: string; weekendId: string; status: AvailabilityStatus; note: string }>
-  ) {
+  async function saveAvailability(updates: AvailabilityUpdate[]) {
     setSaveError(null);
     let nextPayload: SeasonPayload | null = null;
 
@@ -142,7 +167,8 @@ export function PlannerApp({ currentMember, initialPayload }: PlannerAppProps) {
           familyMemberId: update.memberId,
           weekendId: update.weekendId,
           status: update.status,
-          note: update.note
+          note: update.note,
+          janeForecast: update.janeForecast
         })
       });
 
@@ -234,6 +260,7 @@ export function PlannerApp({ currentMember, initialPayload }: PlannerAppProps) {
                 </th>
                 {payload.weekends.map((weekend) => {
                   const holidays = getHolidayCalloutsForWeekend(weekend.startDate, weekend.endDate);
+                  const WeekendJaneIcon = weekend.janeFactor ? JANE_FORECAST_ICONS[weekend.janeFactor.forecast] : null;
 
                   return (
                     <th
@@ -256,6 +283,21 @@ export function PlannerApp({ currentMember, initialPayload }: PlannerAppProps) {
                           ))
                         ) : null}
                       </span>
+                      {weekend.janeFactor && WeekendJaneIcon ? (
+                        <span
+                          className="weekend-jane-factor-icon"
+                          data-forecast={weekend.janeFactor.forecast}
+                          title={`From ${weekend.janeFactor.sourceNames.join(" and ")}: ${
+                            JANE_FORECAST_META[weekend.janeFactor.forecast].label
+                          }`}
+                          aria-label={`Jane Factor, ${JANE_FORECAST_META[weekend.janeFactor.forecast].label}`}
+                        >
+                          <WeekendJaneIcon aria-hidden="true" size={16} />
+                          <span className="jane-factor-tooltip" role="tooltip">
+                            {JANE_FORECAST_META[weekend.janeFactor.forecast].factorLabel}
+                          </span>
+                        </span>
+                      ) : null}
                     </th>
                   );
                 })}
@@ -270,6 +312,7 @@ export function PlannerApp({ currentMember, initialPayload }: PlannerAppProps) {
                   {payload.weekends.map((weekend) => {
                     const rowState = getFamilyRowWeekendState(row, weekend.id, payload);
                     const editable = canEditRow(row);
+                    const JaneIcon = rowState.janeForecast ? JANE_FORECAST_ICONS[rowState.janeForecast] : null;
 
                     return (
                       <td
@@ -295,12 +338,33 @@ export function PlannerApp({ currentMember, initialPayload }: PlannerAppProps) {
                           ) : (
                             <span>{STATUS_META[rowState.status].shortLabel}</span>
                           )}
-                          {rowState.noteText ? (
-                            <span className="note-indicator" title={rowState.noteText} aria-label={`Note: ${rowState.noteText}`}>
-                              <StickyNote aria-hidden="true" size={14} />
-                              <span className="note-tooltip" role="tooltip">
-                                {rowState.noteText}
-                              </span>
+                          {rowState.noteText || rowState.janeForecastText ? (
+                            <span className="cell-indicators">
+                              {rowState.janeForecastText && rowState.janeForecast && JaneIcon ? (
+                                <span
+                                  className="jane-cell-icon"
+                                  data-forecast={rowState.janeForecast}
+                                  title={rowState.janeForecastText}
+                                  aria-label={rowState.janeForecastText}
+                                >
+                                  <JaneIcon aria-hidden="true" size={15} />
+                                  <span className="jane-cell-tooltip" role="tooltip">
+                                    {rowState.janeForecastText}
+                                  </span>
+                                </span>
+                              ) : null}
+                              {rowState.noteText ? (
+                                <span
+                                  className="note-indicator"
+                                  title={rowState.noteText}
+                                  aria-label={`Note: ${rowState.noteText}`}
+                                >
+                                  <StickyNote aria-hidden="true" size={14} />
+                                  <span className="note-tooltip" role="tooltip">
+                                    {rowState.noteText}
+                                  </span>
+                                </span>
+                              ) : null}
                             </span>
                           ) : null}
                         </button>
@@ -317,7 +381,7 @@ export function PlannerApp({ currentMember, initialPayload }: PlannerAppProps) {
           key={
             selectedContext
               ? `${selectedContext.row.id}:${selectedContext.weekend.id}:${selectedContext.cells
-                  .map(({ cell }) => cell.updatedAt ?? "new")
+                  .map(({ cell }) => `${cell.updatedAt ?? "new"}:${cell.janeForecast ?? "none"}`)
                   .join(":")}`
               : "empty"
           }
@@ -379,11 +443,16 @@ function getFamilyRowWeekendState(row: FamilyRow, weekendId: string, payload: Se
   const memberStates = row.members.map((member) => ({
     member,
     status: payload.availability[member.id][weekendId].status,
-    note: payload.availability[member.id][weekendId].note?.trim() ?? ""
+    note: payload.availability[member.id][weekendId].note?.trim() ?? "",
+    janeForecast:
+      payload.availability[member.id][weekendId].status === "free"
+        ? payload.availability[member.id][weekendId].janeForecast
+        : null
   }));
   const statuses = new Set(memberStates.map(({ status }) => status));
   const notes = new Set(memberStates.map(({ note }) => note));
-  const isSplit = statuses.size > 1 || notes.size > 1;
+  const janeForecasts = new Set(memberStates.map(({ janeForecast }) => janeForecast ?? ""));
+  const isSplit = statuses.size > 1 || notes.size > 1 || janeForecasts.size > 1;
   const status = memberStates[0]?.status ?? "unknown";
   const noteText = isSplit
     ? memberStates
@@ -391,17 +460,31 @@ function getFamilyRowWeekendState(row: FamilyRow, weekendId: string, payload: Se
         .map(({ member, note }) => (row.members.length > 1 ? `${member.firstName}: ${note}` : note))
         .join("\n")
     : memberStates[0]?.note ?? "";
+  const janeForecastStates = memberStates.filter(
+    (state): state is (typeof memberStates)[number] & { janeForecast: JaneForecast } => Boolean(state.janeForecast)
+  );
+  const janeForecastText = janeForecastStates
+    .map(({ member, janeForecast }) =>
+      row.members.length > 1
+        ? `${member.firstName}: ${JANE_FORECAST_META[janeForecast].label}`
+        : JANE_FORECAST_META[janeForecast].factorLabel
+    )
+    .join("\n");
+  const firstJaneForecast = janeForecastStates[0]?.janeForecast;
 
   return {
     isSplit,
     status,
     noteText,
+    janeForecastText,
+    janeForecast: firstJaneForecast,
     memberStates,
     accessibleLabel: [
       isSplit
         ? memberStates.map(({ member, status }) => `${member.firstName} ${STATUS_META[status].label}`).join(", ")
         : STATUS_META[status].label,
-      noteText ? `note: ${noteText}` : null
+      noteText ? `note: ${noteText}` : null,
+      janeForecastText || null
     ]
       .filter(Boolean)
       .join(", ")
@@ -426,26 +509,33 @@ function CellEditor({
   canSave: boolean;
   error: string | null;
   onClose: () => void;
-  onSave: (
-    updates: Array<{ memberId: string; weekendId: string; status: AvailabilityStatus; note: string }>
-  ) => Promise<void>;
+  onSave: (updates: AvailabilityUpdate[]) => Promise<void>;
 }) {
   const initialStatuses = new Set(context?.cells.map(({ cell }) => cell.status) ?? ["unknown"]);
   const initialNotes = new Set(context?.cells.map(({ cell }) => cell.note ?? "") ?? [""]);
-  const startsSplit = (context?.cells.length ?? 0) > 1 && (initialStatuses.size > 1 || initialNotes.size > 1);
+  const initialJaneForecasts = new Set(context?.cells.map(({ cell }) => cell.janeForecast ?? "") ?? [""]);
+  const startsSplit =
+    (context?.cells.length ?? 0) > 1 &&
+    (initialStatuses.size > 1 || initialNotes.size > 1 || initialJaneForecasts.size > 1);
   const [mode, setMode] = useState<"together" | "individual">(startsSplit ? "individual" : "together");
   const [status, setStatus] = useState<AvailabilityStatus>(context?.cells[0]?.cell.status ?? "unknown");
   const [note, setNote] = useState(initialNotes.size === 1 ? context?.cells[0]?.cell.note ?? "" : "");
+  const [janeForecast, setJaneForecast] = useState<JaneForecast>(
+    initialJaneForecasts.size === 1 && context?.cells[0]?.cell.janeForecast
+      ? context.cells[0].cell.janeForecast
+      : DEFAULT_JANE_FORECAST
+  );
   const [individualValues, setIndividualValues] = useState(() =>
     Object.fromEntries(
       (context?.cells ?? []).map(({ member, cell }) => [
         member.id,
         {
           status: cell.status,
-          note: cell.note ?? ""
+          note: cell.note ?? "",
+          janeForecast: cell.janeForecast ?? DEFAULT_JANE_FORECAST
         }
       ])
-    ) as Record<string, { status: AvailabilityStatus; note: string }>
+    ) as Record<string, { status: AvailabilityStatus; note: string; janeForecast: JaneForecast }>
   );
   const [isSaving, setIsSaving] = useState(false);
 
@@ -470,13 +560,19 @@ function CellEditor({
             memberId: member.id,
             weekendId: context.weekend.id,
             status,
-            note
+            note,
+            janeForecast: janeForecastForMember(member, status, janeForecast)
           }))
         : context.row.members.map((member) => ({
             memberId: member.id,
             weekendId: context.weekend.id,
             status: individualValues[member.id].status,
-            note: individualValues[member.id].note
+            note: individualValues[member.id].note,
+            janeForecast: janeForecastForMember(
+              member,
+              individualValues[member.id].status,
+              individualValues[member.id].janeForecast
+            )
           }))
     );
     setIsSaving(false);
@@ -508,6 +604,15 @@ function CellEditor({
       {mode === "together" ? (
         <>
           <StatusPicker value={status} disabled={!canSave || isSaving} onChange={setStatus} />
+          <JaneForecastPicker
+            memberNames={context.row.members
+              .filter((member) => canSetJaneForecast(member.firstName))
+              .map((member) => member.firstName)}
+            status={status}
+            value={janeForecast}
+            disabled={!canSave || isSaving}
+            onChange={setJaneForecast}
+          />
           <label className="note-label" htmlFor="availability-note">
             Note
           </label>
@@ -541,6 +646,21 @@ function CellEditor({
                       [member.id]: {
                         ...current[member.id],
                         status: nextStatus
+                      }
+                    }))
+                  }
+                />
+                <JaneForecastPicker
+                  memberNames={canSetJaneForecast(member.firstName) ? [member.firstName] : []}
+                  status={values.status}
+                  value={values.janeForecast}
+                  disabled={!canSave || isSaving}
+                  onChange={(nextForecast) =>
+                    setIndividualValues((current) => ({
+                      ...current,
+                      [member.id]: {
+                        ...current[member.id],
+                        janeForecast: nextForecast
                       }
                     }))
                   }
@@ -611,6 +731,59 @@ function StatusPicker({
       </div>
     </fieldset>
   );
+}
+
+function JaneForecastPicker({
+  memberNames,
+  status,
+  value,
+  disabled,
+  onChange
+}: {
+  memberNames: string[];
+  status: AvailabilityStatus;
+  value: JaneForecast;
+  disabled: boolean;
+  onChange: (forecast: JaneForecast) => void;
+}) {
+  if (status !== "free" || memberNames.length === 0) {
+    return null;
+  }
+
+  return (
+    <fieldset className="jane-forecast-fieldset" disabled={disabled}>
+      <legend>
+        <Cloud aria-hidden="true" size={15} />
+        Jane Forecast
+      </legend>
+      <div className="jane-forecast-options">
+        {JANE_FORECAST_VALUES.map((forecast) => {
+          const Icon = JANE_FORECAST_ICONS[forecast];
+          const meta = JANE_FORECAST_META[forecast];
+
+          return (
+            <button
+              key={forecast}
+              className="jane-forecast-choice"
+              type="button"
+              aria-pressed={value === forecast}
+              data-active={value === forecast}
+              data-forecast={forecast}
+              onClick={() => onChange(forecast)}
+            >
+              <Icon aria-hidden="true" size={17} />
+              <span>{meta.label}</span>
+              <small>{meta.description}</small>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function janeForecastForMember(member: MemberPayload, status: AvailabilityStatus, forecast: JaneForecast) {
+  return status === "free" && canSetJaneForecast(member.firstName) ? forecast : null;
 }
 
 function latestUpdateLabel(cells: Array<{ cell: SeasonPayload["availability"][string][string] }>) {
