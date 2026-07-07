@@ -9,6 +9,7 @@ datasource db {
 
 enum AvailabilityStatus {
   UNKNOWN
+  BOG_BOUND
   FREE
   BUSY
   MAYBE

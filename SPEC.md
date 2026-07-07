@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-Family Weekend Planner is a lightweight shared web app for coordinating summer weekends at the Cape house. It replaces a shared note/table where weekends are columns, family members are rows, and each person marks whether they are free, busy, maybe available, or not yet answered.
+Family Weekend Planner is a lightweight shared web app for coordinating summer weekends at The Bog, the family Cape house. It replaces a shared note/table where weekends are columns, family members are rows, and each person marks whether they are planning to be at The Bog, free, busy, maybe available, or not yet answered.
 
 The default experience should preserve the clarity of the original table while adding better filtering, calendar views, persistence, mobile support, and a simple browser-based login flow.
 
@@ -41,7 +41,8 @@ For the MVP, the organizer can be a configured first name or a simple admin mode
 - Availability entry: one family member's status and optional note for one weekend.
 - Status:
   - Unknown: no answer yet.
-  - Free: available for the Cape house.
+  - Bog bound: planning to be at The Bog.
+  - Free: available for The Bog, but not yet committed to going.
   - Busy: unavailable.
   - Maybe: uncertain or partially available.
 
@@ -79,12 +80,12 @@ Security note: first-name login is intentionally low-friction, not high-security
 
 ### 6.4 Editing Availability
 
-- A user can set one of their own cells to Free, Busy, Maybe, or Unknown.
+- A user can set one of their own cells to Bog bound, Free, Busy, Maybe, or Unknown.
 - A user can optionally add a short note to one of their own cells.
 - Notes are visible to all logged-in family members.
 - A cell should show whether a note exists even in compact table mode.
-- Katie and Elizabeth can optionally add a Jane Forecast when they mark themselves Free.
-- Jane Forecast is a guest signal only; it does not add Jane to the roster or affect free/busy summary counts.
+- Katie and Elizabeth can optionally add a Jane Forecast when they mark themselves Free or Bog bound.
+- Jane Forecast is a guest signal only; it does not add Jane to the roster or affect availability summary counts.
 - Changes should be saved immediately or with a clear save state.
 - The app should show a clear error if saving fails.
 - No family member can edit another family member's availability in the MVP.
@@ -92,10 +93,10 @@ Security note: first-name login is intentionally low-friction, not high-security
 ### 6.5 Highlight and Filter Controls
 
 - Users can toggle highlights for:
-  - Free weekends, everyone: every active family member is Free.
-  - Free weekends, most: at least a configurable threshold are Free.
+  - Free weekends, everyone: every active family member is Free or Bog bound.
+  - Free weekends, most: at least a configurable threshold are Free or Bog bound.
   - Needs responses: at least one active family member is Unknown.
-  - My free weekends: weekends where the logged-in user is Free.
+  - My free weekends: weekends where the logged-in user is Free or Bog bound.
   - My busy weekends: weekends where the logged-in user is Busy.
 - Highlighting should visually emphasize matching weekend columns while keeping the full table visible.
 - The "most" threshold should default to a simple majority, with an organizer-configurable override.
@@ -262,8 +263,8 @@ Constraints:
 - `FamilyMember.firstName` must be unique among active members for MVP.
 - Duplicate first names are not handled in the MVP.
 - `Availability` should be unique by `weekendId` and `familyMemberId`.
-- `status` should be constrained to `unknown`, `free`, `busy`, or `maybe`.
-- `janeForecast` should be nullable and only set for Katie or Elizabeth when their status is `free`.
+- `status` should be constrained to `unknown`, `bog_bound`, `free`, `busy`, or `maybe`.
+- `janeForecast` should be nullable and only set for Katie or Elizabeth when their status is `free` or `bog_bound`.
 
 ### 9.4 API Surface
 
@@ -326,8 +327,8 @@ Core components:
 For each weekend:
 
 - Count active family members by status.
-- `everyoneFree` is true when all active members have status `free`.
-- `mostFree` is true when free count is at least `mostFreeThreshold`.
+- `everyoneFree` is true when all active members have status `free` or `bog_bound`.
+- `mostFree` is true when the combined free and Bog bound count is at least `mostFreeThreshold`.
 - `needsResponses` is true when unknown count is greater than zero.
 - Children and adults use the same `FamilyMember` model and count equally.
 
@@ -371,7 +372,8 @@ Deployment requirements:
 - Historical inactive-member visibility is out of scope for now.
 - Optional free-text notes are enough; structured busy reasons are not part of the MVP.
 - The app will not send reminders for missing availability.
-- Jane Forecast is tracked only as a playful guest signal from Katie or Elizabeth free weekends and does not affect roster counts.
+- Bog bound is an explicit status for someone planning to be at The Bog and counts as available for "everyone free" and "most free" calculations.
+- Jane Forecast is tracked only as a playful guest signal from Katie or Elizabeth free or Bog-bound weekends and does not affect roster counts.
 
 ## 11. Recommended First Implementation Milestone
 
@@ -388,6 +390,11 @@ Build a vertical slice that supports one seeded season and one seeded roster:
 This milestone proves the central workflow before investing in admin screens, richer calendar views, or authentication upgrades.
 
 ## 12. Change Log
+
+### 2026-07-07
+
+- Added Bog bound as an explicit status for people planning to be at The Bog.
+- Clarified that Bog bound counts as available for free-weekend summary calculations and Jane Forecast eligibility.
 
 ### 2026-06-12
 

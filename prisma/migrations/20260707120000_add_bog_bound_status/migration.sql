@@ -1,0 +1,1 @@
+ALTER TYPE "AvailabilityStatus" ADD VALUE 'BOG_BOUND' BEFORE 'FREE';

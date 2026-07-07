@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { canSetJaneForecast, strongestJaneForecast } from "@/lib/jane-factor";
 import { fromPrismaJaneForecast } from "@/lib/jane-factor-prisma";
 import { fromPrismaStatus } from "@/lib/status";
+import { countsAsCapeAvailability } from "@/lib/status-rules";
 import { AvailabilityCellPayload, AvailabilityStatus, JaneForecast, SeasonPayload } from "@/types/planner";
 
 function dateOnly(date: Date) {
@@ -68,6 +69,7 @@ export async function getActiveSeasonPayload(): Promise<SeasonPayload> {
     const summary: Record<AvailabilityStatus, number> = {
       unknown: 0,
       free: 0,
+      bog_bound: 0,
       busy: 0,
       maybe: 0
     };
@@ -81,15 +83,15 @@ export async function getActiveSeasonPayload(): Promise<SeasonPayload> {
       .filter((member) => canSetJaneForecast(member.firstName))
       .map((member) => ({
         member,
-        forecast:
-          availability[member.id][weekend.id]?.status === "free"
-            ? availability[member.id][weekend.id]?.janeForecast
-            : null
+        forecast: countsAsCapeAvailability(availability[member.id][weekend.id]?.status ?? "unknown")
+          ? availability[member.id][weekend.id]?.janeForecast
+          : null
       }))
       .filter((signal): signal is { member: (typeof members)[number]; forecast: JaneForecast } =>
         Boolean(signal.forecast)
       );
     const strongestForecast = strongestJaneForecast(janeFactorSignals.map((signal) => signal.forecast));
+    const availableCount = summary.free + summary.bog_bound;
 
     return {
       id: weekend.id,
@@ -107,8 +109,8 @@ export async function getActiveSeasonPayload(): Promise<SeasonPayload> {
           }
         : null,
       flags: {
-        everyoneFree: members.length > 0 && summary.free === members.length,
-        mostFree: summary.free >= season.mostFreeThreshold,
+        everyoneFree: members.length > 0 && availableCount === members.length,
+        mostFree: availableCount >= season.mostFreeThreshold,
         needsResponses: summary.unknown > 0
       }
     };

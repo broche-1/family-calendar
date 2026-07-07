@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getActiveSeasonPayload } from "@/lib/season";
 import { getCurrentMember } from "@/lib/session";
 import { isAvailabilityStatus, toPrismaStatus } from "@/lib/status";
+import { countsAsCapeAvailability } from "@/lib/status-rules";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +69,7 @@ export async function PUT(request: Request) {
   }
 
   const storedJaneForecast =
-    status === "free" && canSetJaneForecast(targetMember.firstName) && parsedJaneForecast
+    countsAsCapeAvailability(status) && canSetJaneForecast(targetMember.firstName) && parsedJaneForecast
       ? toPrismaJaneForecast(parsedJaneForecast)
       : null;
 

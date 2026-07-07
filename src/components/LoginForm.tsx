@@ -48,7 +48,7 @@ export function LoginForm() {
 
   return (
     <section className="login-panel" aria-labelledby="login-title">
-      <p className="eyebrow">Cape house weekends</p>
+      <p className="eyebrow">The Bog weekends</p>
       <h1 id="login-title">Family Weekend Planner</h1>
       <p className="login-copy">Enter your first name to view and update weekend availability.</p>
       <form className="login-form" onSubmit={handleSubmit}>

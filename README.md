@@ -1,6 +1,6 @@
 # Family Weekend Planner
 
-Small shared web app for coordinating Cape house weekend availability.
+Small shared web app for coordinating weekend availability at The Bog.
 
 ## MVP
 

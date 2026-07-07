@@ -16,7 +16,12 @@ export const STATUS_META: Record<
   free: {
     label: "Free",
     shortLabel: "Free",
-    description: "Available for the Cape house"
+    description: "Available, not committed"
+  },
+  bog_bound: {
+    label: "Bog bound",
+    shortLabel: "Bog",
+    description: "Planning to be at The Bog"
   },
   busy: {
     label: "Busy",

@@ -1,4 +1,4 @@
-export const STATUS_VALUES = ["unknown", "free", "busy", "maybe"] as const;
+export const STATUS_VALUES = ["unknown", "bog_bound", "free", "busy", "maybe"] as const;
 export const JANE_FORECAST_VALUES = ["sunny_with_jane", "partly_janey", "jane_unclear", "no_jane_expected"] as const;
 
 export type AvailabilityStatus = (typeof STATUS_VALUES)[number];
@@ -23,6 +23,7 @@ export type AvailabilityCellPayload = {
 
 export type WeekendSummaryPayload = {
   free: number;
+  bog_bound: number;
   busy: number;
   maybe: number;
   unknown: number;

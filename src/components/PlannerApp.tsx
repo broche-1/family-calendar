@@ -20,6 +20,7 @@ import { FAMILY_ROW_DEFINITIONS } from "@/lib/family-groups";
 import { getHolidayCalloutsForWeekend } from "@/lib/holidays";
 import { canSetJaneForecast, DEFAULT_JANE_FORECAST, JANE_FORECAST_META } from "@/lib/jane-factor";
 import { STATUS_META } from "@/lib/status-display";
+import { countsAsCapeAvailability } from "@/lib/status-rules";
 import {
   AvailabilityStatus,
   JaneForecast,
@@ -137,7 +138,7 @@ export function PlannerApp({ currentMember, initialPayload }: PlannerAppProps) {
     }
 
     if (activeHighlight === "myFree") {
-      return myStatus === "free";
+      return myStatus ? countsAsCapeAvailability(myStatus) : false;
     }
 
     if (activeHighlight === "myBusy") {
@@ -445,7 +446,7 @@ function getFamilyRowWeekendState(row: FamilyRow, weekendId: string, payload: Se
     status: payload.availability[member.id][weekendId].status,
     note: payload.availability[member.id][weekendId].note?.trim() ?? "",
     janeForecast:
-      payload.availability[member.id][weekendId].status === "free"
+      countsAsCapeAvailability(payload.availability[member.id][weekendId].status)
         ? payload.availability[member.id][weekendId].janeForecast
         : null
   }));
@@ -746,7 +747,7 @@ function JaneForecastPicker({
   disabled: boolean;
   onChange: (forecast: JaneForecast) => void;
 }) {
-  if (status !== "free" || memberNames.length === 0) {
+  if (!countsAsCapeAvailability(status) || memberNames.length === 0) {
     return null;
   }
 
@@ -783,7 +784,7 @@ function JaneForecastPicker({
 }
 
 function janeForecastForMember(member: MemberPayload, status: AvailabilityStatus, forecast: JaneForecast) {
-  return status === "free" && canSetJaneForecast(member.firstName) ? forecast : null;
+  return countsAsCapeAvailability(status) && canSetJaneForecast(member.firstName) ? forecast : null;
 }
 
 function latestUpdateLabel(cells: Array<{ cell: SeasonPayload["availability"][string][string] }>) {

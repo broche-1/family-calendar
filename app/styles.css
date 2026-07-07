@@ -9,6 +9,8 @@
   --text-muted: #64748b;
   --accent: #2563eb;
   --accent-strong: #1d4ed8;
+  --bog-bound-bg: #ccfbf1;
+  --bog-bound-text: #115e59;
   --free-bg: #dcfce7;
   --free-text: #166534;
   --busy-bg: #fee2e2;
@@ -586,6 +588,11 @@ textarea {
 .status-free {
   background: var(--free-bg);
   color: var(--free-text);
+}
+
+.status-bog_bound {
+  background: var(--bog-bound-bg);
+  color: var(--bog-bound-text);
 }
 
 .status-busy {
